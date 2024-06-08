@@ -24,6 +24,12 @@ sudo docker run --rm -v $(pwd):/certs docker.elastic.co/elasticsearch/elasticsea
 sudo unzip elastic-certificates.zip -d certs
 ```
 
+**Give the file permission**
+
+```
+sudo chown -R $(whoami):$(whoami) certs
+```
+
 Verify the certs directory structure after this step. It should look something like this:
 
 ```

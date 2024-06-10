@@ -168,6 +168,8 @@ services:
     network_mode: host
     tty: true
     stdin_open: true
+    environment:
+    - NODE_TLS_REJECT_UNAUTHORIZED=0
     command: '/app/bin/elastic-ingest -c /bin/config.yml'
 
 volumes:

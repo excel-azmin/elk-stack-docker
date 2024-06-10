@@ -10,10 +10,10 @@
 ##  The list of connector clients/customized connectors configurations.
 ##    Each object in the list requires `connector_id` and `service_type`.
 ##    An example is:
-   connectors:
-     - connector_id: E2F9AJABjron9RPQdw0K # the ID of the connector.
-       service_type: mongodb # The service type of the connector.
-       api_key: '' # The Elasticsearch API key used to write data into the content index.
+connectors:
+  - connector_id: E2F9AJABjron9RPQdw0K # the ID of the connector.
+    service_type: mongodb # The service type of the connector.
+    api_key: '' # The Elasticsearch API key used to write data into the content index.
 #connectors: []
 #
 #
@@ -51,11 +51,11 @@ elasticsearch.password: elastic123
 #
 #
 ##  Whether SSL is used for the Elasticsearch connection.
-#elasticsearch.ssl: true
+elasticsearch.ssl: false
 #
 #
 ##  Path to a CA bundle, e.g. /path/to/ca.crt
-#elasticsearch.ca_certs: null
+# elasticsearch.ca_certs: /usr/share/elasticsearch/config/certs/ca/ca.crt
 #
 #
 ##  Whether to retry on request timeout.

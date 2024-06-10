@@ -15,12 +15,12 @@ services:
           echo "Set the KIBANA_PASSWORD environment variable in the .env file";
           exit 1;
         fi;
-        if [ ! -f certs/ca.zip ]; then
+        if [ ! -f /usr/share/elasticsearch/config/certs/ca.zip ]; then
           echo "Creating CA";
-          bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;
-          unzip config/certs/ca.zip -d config/certs;
+          bin/elasticsearch-certutil ca --silent --pem -out /usr/share/elasticsearch/config/certs/ca.zip;
+          unzip -o /usr/share/elasticsearch/config/certs/ca.zip -d /usr/share/elasticsearch/config/certs;
         fi;
-        if [ ! -f certs/certs.zip ]; then
+        if [ ! -f /usr/share/elasticsearch/config/certs/certs.zip ]; then
           echo "Creating certs";
           echo -ne \
           "instances:\n"\
@@ -30,18 +30,18 @@ services:
           "      - localhost\n"\
           "    ip:\n"\
           "      - 127.0.0.1\n"\
-          > config/certs/instances.yml;
-          bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
-          unzip config/certs/certs.zip -d config/certs;
+          > /usr/share/elasticsearch/config/certs/instances.yml;
+          bin/elasticsearch-certutil cert --silent --pem -out /usr/share/elasticsearch/config/certs/certs.zip --in /usr/share/elasticsearch/config/certs/instances.yml --ca-cert /usr/share/elasticsearch/config/certs/ca/ca.crt --ca-key /usr/share/elasticsearch/config/certs/ca/ca.key;
+          unzip -o /usr/share/elasticsearch/config/certs/certs.zip -d /usr/share/elasticsearch/config/certs;
         fi;
-        echo "Setting file permissions"
-        chown -R root:root config/certs;
-        find . -type d -exec chmod 750 \{\} \;;
-        find . -type f -exec chmod 640 \{\} \;;
+        echo "Setting file permissions";
+        chown -R root:root /usr/share/elasticsearch/config/certs;
+        find /usr/share/elasticsearch/config/certs -type d -exec chmod 750 \{\} \;;
+        find /usr/share/elasticsearch/config/certs -type f -exec chmod 640 \{\} \;;
         echo "Waiting for Elasticsearch availability";
-        until curl -s --cacert config/certs/ca/ca.crt https://es01:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
+        until curl -s --cacert /usr/share/elasticsearch/config/certs/ca/ca.crt https://es01:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
         echo "Setting kibana_system password";
-        until curl -s -X POST --cacert config/certs/ca/ca.crt -u elastic:${ELASTIC_PASSWORD} -H "Content-Type: application/json" https://es01:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 10; done;
+        until curl -s -X POST --cacert /usr/share/elasticsearch/config/certs/ca/ca.crt -u elastic:${ELASTIC_PASSWORD} -H "Content-Type: application/json" https://es01:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 10; done;
         echo "All done!";
       '
     healthcheck:
@@ -153,6 +153,22 @@ services:
       interval: 10s
       timeout: 10s
       retries: 120
+  connector:
+    depends_on:
+      es01:
+        condition: service_healthy
+      kibana:
+        condition: service_healthy
+      enterprisesearch:
+        condition: service_healthy  
+    image: docker.elastic.co/enterprise-search/elastic-connectors:8.14.0.0
+    container_name: elastic_connectors
+    volumes:
+      - ./config.yml:/bin/config.yml
+    network_mode: host
+    tty: true
+    stdin_open: true
+    command: '/app/bin/elastic-ingest -c /bin/config.yml'
 
 volumes:
   certs:

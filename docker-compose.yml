@@ -279,6 +279,7 @@ services:
       - XPACK_SECURITY_ENCRYPTIONKEY=${ENCRYPTION_KEY}
       - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${ENCRYPTION_KEY}
       - XPACK_REPORTING_ENCRYPTIONKEY=${ENCRYPTION_KEY}
+      - ENTERPRISESEARCH_HOST=http://enterprisesearch:3002
       # - enterpriseSearch.host=http://localhost:3002
     mem_limit: ${KB_MEM_LIMIT}
     healthcheck:

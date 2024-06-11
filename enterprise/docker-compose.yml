@@ -1,11 +1,17 @@
 version: "2.2"
 
+networks:
+  elastic:
+    driver: bridge
+
 services:
   setup:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
     user: "0"
+    networks:
+      - elastic
     command: >
       bash -c '
         if [ x${ELASTIC_PASSWORD} == x ]; then
@@ -45,7 +51,7 @@ services:
         echo "All done!";
       '
     healthcheck:
-      test: ["CMD-SHELL", "[ -f config/certs/es01/es01.crt ]"]
+      test: ["CMD-SHELL", "[ -f /usr/share/elasticsearch/config/certs/es01/es01.crt ]"]
       interval: 1s
       timeout: 5s
       retries: 120
@@ -60,6 +66,8 @@ services:
       - esdata01:/usr/share/elasticsearch/data
     ports:
       - ${ES_PORT}:9200
+    networks:
+      - elastic
     environment:
       - node.name=es01
       - cluster.name=${CLUSTER_NAME}
@@ -87,7 +95,7 @@ services:
       test:
         [
             "CMD-SHELL",
-            "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
+            "curl -s --cacert /usr/share/elasticsearch/config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
         ]
       interval: 10s
       timeout: 10s
@@ -103,12 +111,14 @@ services:
       - kibanadata:/usr/share/kibana/data
     ports:
       - ${KIBANA_PORT}:5601
+    networks:
+      - elastic
     environment:
       - SERVERNAME=kibana
       - ELASTICSEARCH_HOSTS=https://es01:9200
       - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
-      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
+      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=/usr/share/kibana/config/certs/ca/ca.crt
       - ENTERPRISESEARCH_HOST=http://enterprisesearch:${ENTERPRISE_SEARCH_PORT}
     mem_limit: ${MEM_LIMIT}
     healthcheck:
@@ -133,6 +143,8 @@ services:
       - enterprisesearchdata:/usr/share/enterprise-search/config
     ports:
       - ${ENTERPRISE_SEARCH_PORT}:3002
+    networks:
+      - elastic
     environment:
       - SERVERNAME=enterprisesearch
       - secret_management.encryption_keys=[${ENCRYPTION_KEYS}]
@@ -153,6 +165,34 @@ services:
       interval: 10s
       timeout: 10s
       retries: 120
+
+  logstash:
+    depends_on:
+      es01:
+        condition: service_healthy
+      kibana:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: Dockerfile
+    labels:
+      co.elastic.logs/module: logstash
+    user: root
+    volumes:
+      - logstashdata01:/usr/share/logstash/data
+      - certs:/usr/share/logstash/certs
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    environment:
+      - NODE_NAME="logstash"
+      - xpack.monitoring.enabled=false
+      - ELASTIC_USER=elastic
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - ELASTIC_HOSTS=https://es01:9200
+    command: logstash -f /usr/share/logstash/pipeline/logstash.conf
+    ports:
+      - "5044:5044/udp"
+    mem_limit: ${LS_MEM_LIMIT}
+  
   connector:
     depends_on:
       es01:
@@ -165,11 +205,11 @@ services:
     container_name: elastic_connectors
     volumes:
       - ./config.yml:/bin/config.yml
-    network_mode: host
+      - certs:/usr/share/elasticsearch/config/certs
+    networks:
+      - elastic
     tty: true
     stdin_open: true
-    environment:
-    - NODE_TLS_REJECT_UNAUTHORIZED=0
     command: '/app/bin/elastic-ingest -c /bin/config.yml'
 
 volumes:
@@ -180,4 +220,6 @@ volumes:
   esdata01:
     driver: local
   kibanadata:
+    driver: local
+  logstashdata01:
     driver: local

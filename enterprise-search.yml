@@ -1,8 +1,0 @@
-secret_management.encryption_keys:
-  - f4b80f6b28883af9060acbce3bba892c6fc6bfae2554e4dbdf55337d9f909549
-elasticsearch.host: https://es01:9200
-elasticsearch.username: elastic
-elasticsearch.password: elastic123
-elasticsearch.ssl.enabled: true
-elasticsearch.ssl.certificate_authority: /usr/share/enterprise-search/config/certs/ca/ca.crt
-allow_es_settings_modification: true
